@@ -340,5 +340,8 @@ abstract class BaseTemplate
         );
     }
 
+    public function postProcessParameterValues($container, $parameters) {
+        return $parameters;
+    }
 
 }

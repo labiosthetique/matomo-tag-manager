@@ -230,6 +230,10 @@ abstract class BaseContext
             array_pop($this->nestedVariableCals);
         }
 
+        if(isset($entity['__typeClass'])) {
+            $vars = $entity['__typeClass']->postProcessParameterValues($container, $vars);   
+        }
+
         return $vars;
     }
 

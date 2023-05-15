@@ -366,6 +366,7 @@ class Variable extends BaseModel
         }
 
         $variableTemplate = $this->variablesProvider->getVariable($variable['type']);
+        $variable['__typeClass'] = $variableTemplate;
 
         if (!empty($variableTemplate)) {
             $variable['typeMetadata'] = $variableTemplate->toArray();
