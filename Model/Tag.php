@@ -209,6 +209,8 @@ class Tag extends BaseModel
 
         $tagType = $this->tagsProvider->getTag($tag['type']);
 
+        $tag['__typeClass'] = $tagType;
+
         if (!empty($tagType)) {
             $tag['typeMetadata'] = $tagType->toArray();
             foreach ($tag['typeMetadata']['parameters'] as &$parameter) {

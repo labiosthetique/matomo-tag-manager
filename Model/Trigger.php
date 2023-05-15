@@ -174,6 +174,8 @@ class Trigger extends BaseModel
 
         $triggerTemplate = $this->triggersProvider->getTrigger($trigger['type']);
 
+        $trigger['__typeClass'] = $triggerTemplate;
+
         if (!empty($triggerTemplate)) {
             $trigger['typeMetadata'] = $triggerTemplate->toArray();
             foreach ($trigger['typeMetadata']['parameters'] as &$parameter) {
