@@ -393,7 +393,7 @@ abstract class BaseContext
             $variable = $this->variablesProvider->getPreConfiguredVariable($variableNameOrVariable);
             if ($variable) {
                 $defaultParams = [];
-                foreach ($variable->getParameters() as $parameter) {
+                foreach ($variable->getFilteredParameters() as $parameter) {
                     $defaultParams[$parameter->getName()] = $parameter->getValue();
                 }
                 $var = [

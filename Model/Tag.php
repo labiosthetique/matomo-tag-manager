@@ -102,7 +102,7 @@ class Tag extends BaseModel
             throw new \Exception('Invalid tag type');
         }
 
-        $params = $tagTemplate->getParameters();
+        $params = $tagTemplate->getFilteredParameters();
 
         // we make sure to only save parameters that are defined in the tag template
         $newParameters = [];

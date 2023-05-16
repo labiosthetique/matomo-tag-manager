@@ -57,6 +57,17 @@ abstract class BaseTemplate
     abstract public function getParameters();
 
     /**
+     * Get the filtered list of parameters that can be configured for this template.
+     * @return Setting[]
+     */
+    public function getFilteredParameters() {
+        $parameters = $this->getParameters();
+        Piwik::postEvent('TagManager.filterParameters', [&$parameters, &$this]);
+
+        return $parameters;
+    }
+
+    /**
      * Get the category this template belongs to.
      * @return string
      */
@@ -296,7 +307,7 @@ abstract class BaseTemplate
     {
         $settingsMetadata = new SettingsMetadata();
         $params = array();
-        $tagParameters = $this->getParameters();
+        $tagParameters = $this->getFilteredParameters();
 
         if (!empty($tagParameters)) {
             foreach ($tagParameters as $parameter) {
