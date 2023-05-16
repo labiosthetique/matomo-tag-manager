@@ -107,7 +107,7 @@ class Variable extends BaseModel
             throw new \Exception('Invalid variable type');
         }
 
-        $params = $variableTemplate->getParameters();
+        $params = $variableTemplate->getFilteredParameters();
 
         // we make sure to only save parameters that are defined in the tag template
         $newParameters = [];
