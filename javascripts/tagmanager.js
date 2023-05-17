@@ -1413,24 +1413,22 @@
             function HookExecutor (container) {
                 this.container = container;
 
-                this.execute = function (hookName, hookArgs, afterCallback, ...args) {
-                    console.log('nm', 'exec', hookName, this.container);
-
-                    var hooks = [...(this.container.hooks[hookName] || [])];
+                this.execute = function (hookName, hookArgs, afterCallback) {
+                    var args = arguments.slice(4);
+                    var hooks = (this.container.hooks[hookName] || []).slice(0);
 
                     function next() {
                         const callback = hooks.shift();
-                        if(!callback) return afterCallback(...args);
+                        if(!callback) return afterCallback.apply(this, args);
 
                         return callback.execute(next, hookArgs);
-                    }
+                    };
 
                     return next();
-                }
+                };
             }
 
             function Tag (tag, container) {
-                console.log('nm', tag, container);
                 this.type = tag.type;
                 this.name = tag.name;
                 this.fireTriggerIds = tag.fireTriggerIds ? tag.fireTriggerIds : [];
@@ -1454,7 +1452,6 @@
                 };
 
                 this._doFire = function () {
-                    console.log('nm', 'do-fire', this);
                     if (this.blocked) {
                         Debug.log('not firing as this tag is blocked', this);
                         return 'tag is blocked';
@@ -1519,11 +1516,11 @@
                     console.log('nm', 'fire', this);
                     if (this.fireDelay) {
                         setTimeout(function () {
-                            container.hookExecutor.execute('BeforeTagFire', { container, tag: self }, self._doFire.bind(self))
+                            container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
                             self.beforeFire(self._doFire.bind(self))
                         }, this.fireDelay);
                     } else {
-                        return container.hookExecutor.execute('BeforeTagFire', { container, tag: self }, self._doFire.bind(self))
+                        return container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
                     }
                 };
 
@@ -1579,6 +1576,7 @@
                 }
 
             }
+
             Tag.FIRE_LIMIT_ONCE_PAGE = 'once_page';
             Tag.FIRE_LIMIT_ONCE_24HOURS = 'once_24hours';
             Tag.FIRE_LIMIT_ONCE_LIFETIME = 'once_lifetime';
@@ -1798,7 +1796,7 @@
                     container.dataLayer.push({'mtm.containerId': container.id});
                     Debug.log('running container');
 
-                    container.hookExecutor.execute('BeforeContainerRun', { container }, container.run.bind(container));
+                    container.hookExecutor.execute('BeforeContainerRun', { container: container }, container.run.bind(container));
 
                     return container;
                 },
