@@ -1409,7 +1409,28 @@
                 parameters = null;
 
             }
+
+            function HookExecutor (container) {
+                this.container = container;
+
+                this.execute = function (hookName, hookArgs, afterCallback, ...args) {
+                    console.log('nm', 'exec', hookName, this.container);
+
+                    var hooks = [...(this.container.hooks[hookName] || [])];
+
+                    function next() {
+                        const callback = hooks.shift();
+                        if(!callback) return afterCallback(...args);
+
+                        return callback.execute(next, hookArgs);
+                    }
+
+                    return next();
+                }
+            }
+
             function Tag (tag, container) {
+                console.log('nm', tag, container);
                 this.type = tag.type;
                 this.name = tag.name;
                 this.fireTriggerIds = tag.fireTriggerIds ? tag.fireTriggerIds : [];
@@ -1433,6 +1454,7 @@
                 };
 
                 this._doFire = function () {
+                    console.log('nm', 'do-fire', this);
                     if (this.blocked) {
                         Debug.log('not firing as this tag is blocked', this);
                         return 'tag is blocked';
@@ -1494,12 +1516,14 @@
                 };
 
                 this.fire = function () {
+                    console.log('nm', 'fire', this);
                     if (this.fireDelay) {
                         setTimeout(function () {
-                            self._doFire();
+                            container.hookExecutor.execute('BeforeTagFire', { container, tag: self }, self._doFire.bind(self))
+                            self.beforeFire(self._doFire.bind(self))
                         }, this.fireDelay);
                     } else {
-                        return this._doFire();
+                        return container.hookExecutor.execute('BeforeTagFire', { container, tag: self }, self._doFire.bind(self))
                     }
                 };
 
@@ -1574,6 +1598,8 @@
                 this.variables = [];
                 this.triggers = [];
                 this.tags = []; // only there for debugging
+                this.hooks = {};
+                this.hookExecutor = new HookExecutor(this);
 
                 this.onNewGlobalDataLayerValue = function (value) {
                     this.dataLayer.push(value);
@@ -1633,6 +1659,16 @@
                 if (container.variables && utils.isArray(container.variables)) {
                     for (i = 0; i < container.variables.length; i++) {
                         this.variables.push(buildVariable(container.variables[i], this));
+                    }
+                }
+
+                if (container.hooks && utils.isArray(container.hooks)) {
+                    for (i = 0; i < container.hooks.length; i++) {
+                        for(j = 0; j < container.hooks[i].targets.length; j++) {
+                            if (!this.hooks[container.hooks[i].targets[j]]) this.hooks[container.hooks[i].targets[j]] = [];
+
+                            this.hooks[container.hooks[i].targets[j]].push(new templates[container.hooks[i].Hook]());
+                        }
                     }
                 }
 
@@ -1762,7 +1798,8 @@
                     container.dataLayer.push({'mtm.containerId': container.id});
                     Debug.log('running container');
 
-                    container.run();
+                    container.hookExecutor.execute('BeforeContainerRun', { container }, container.run.bind(container));
+
                     return container;
                 },
                 enableDebugMode: function () { Debug.enabled = true; }

@@ -21,6 +21,7 @@ use Piwik\Plugins\TagManager\Model\Container;
 use Piwik\Plugins\TagManager\Model\Environment;
 use Piwik\Plugins\TagManager\Model\Salt;
 use Piwik\Plugins\TagManager\Model\Tag;
+use Piwik\Plugins\TagManager\Model\Hook;
 use Piwik\Plugins\TagManager\Model\Trigger;
 use Piwik\Plugins\TagManager\Model\Variable;
 use Piwik\Plugins\TagManager\SystemSettings;
@@ -43,9 +44,9 @@ class WebContext extends BaseContext
      */
     private $templateLocator;
 
-    public function __construct(VariablesProvider $variablesProvider, Variable $variableModel, Trigger $triggerModel, Tag $tagModel, Container $containerModel, StorageInterface $storage, JavaScriptTagManagerLoader $javaScriptTagManagerLoader, Salt $salt)
+    public function __construct(VariablesProvider $variablesProvider, Variable $variableModel, Trigger $triggerModel, Tag $tagModel, Hook $hookModel, Container $containerModel, StorageInterface $storage, JavaScriptTagManagerLoader $javaScriptTagManagerLoader, Salt $salt)
     {
-        parent::__construct($variablesProvider, $variableModel, $triggerModel, $tagModel, $containerModel, $storage, $salt);
+        parent::__construct($variablesProvider, $variableModel, $triggerModel, $tagModel, $hookModel, $containerModel, $storage, $salt);
         $this->javaScriptTagManagerLoader = $javaScriptTagManagerLoader;
     }
 
@@ -173,6 +174,17 @@ class WebContext extends BaseContext
                 }
             }
 
+            foreach ($containerJs['hooks'] as &$hook) {
+                $hook['Hook'] = $this->templateLocator->loadHookTemplate($hook, self::ID);
+                $hook['parameters'] = [];
+
+                if (!$isPreviewRelease) {
+                    $hook['name'] = $variable['type'];
+                } else {
+                    $hook['name'] = Common::unsanitizeInputValue($hook['name']);
+                }
+            }
+
             $jsonOptions = 0;
             if (Development::isEnabled()) {
                 $jsonOptions = JSON_PRETTY_PRINT;
@@ -180,6 +192,7 @@ class WebContext extends BaseContext
 
             $initContainer = '(function(){';
             $initContainer .= "\nvar Templates = {};\n";
+            $initContainer .= "window.mtmTemplates = Templates;\n";
             foreach ($this->templateLocator->getLoadedTemplates() as $methodName => $template) {
                 $initContainer .= sprintf("Templates['%s'] = %s \n", $methodName, $template);
             }
