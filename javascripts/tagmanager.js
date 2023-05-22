@@ -1414,7 +1414,7 @@
                 this.container = container;
 
                 this.execute = function (hookName, hookArgs, afterCallback) {
-                    var args = arguments.slice(4);
+                    var args = Object.values(arguments).slice(4);
                     var hooks = (this.container.hooks[hookName] || []).slice(0);
 
                     function next() {
