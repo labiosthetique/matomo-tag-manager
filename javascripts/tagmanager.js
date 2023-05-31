@@ -1511,7 +1511,6 @@
                 };
 
                 this.fire = function () {
-                    console.log('nm', 'fire', this);
                     if (this.fireDelay) {
                         setTimeout(function () {
                             container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
