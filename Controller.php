@@ -258,7 +258,7 @@ class Controller extends \Piwik\Plugin\Controller
         return $this->renderManageContainerTemplate('releases');
     }
 
-    private function renderManageContainerTemplate($template, $variables = array())
+    protected function renderManageContainerTemplate($template, $variables = array())
     {
         $this->accessValidator->checkViewPermission($this->idSite);
 
