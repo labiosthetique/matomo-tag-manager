@@ -16,6 +16,8 @@ use Piwik\Exception\UnexpectedWebsiteFoundException;
 use Piwik\Log;
 use Piwik\Piwik;
 use Piwik\Plugin;
+use Piwik\Plugins\SitesManager\SiteContentDetection\ReactJs;
+use Piwik\Plugin\Manager;
 use Piwik\Plugins\TagManager\Access\Capability\PublishLiveContainer;
 use Piwik\Plugins\TagManager\Access\Capability\TagManagerWrite;
 use Piwik\Plugins\TagManager\Access\Capability\UseCustomTemplates;
@@ -32,6 +34,7 @@ use Piwik\Plugins\CoreHome\SystemSummary;
 use Piwik\Plugins\TagManager\Model\Container\ContainerIdGenerator;
 use Piwik\Plugins\TagManager\Model\Salt;
 use Piwik\Site;
+use Piwik\SiteContentDetector;
 use Piwik\View;
 use Piwik\Context;
 use Piwik\Log\LoggerInterface;
@@ -60,6 +63,7 @@ class TagManager extends \Piwik\Plugin
             'SitesManager.addSite.end' => 'onSiteAdded',
             'System.addSystemSummaryItems' => 'addSystemSummaryItems',
             'Template.endTrackingCodePage' => 'addTagManagerCode',
+            'Template.siteWithoutDataTab.MatomoTagManager.content' => 'setTagManagerCode',
             'Template.endTrackingHelpPage' => 'addTagManagerTrackingCodeHelp',
             'Template.endTrackingCodePageTableOfContents' => 'endTrackingCodePageTableOfContents',
             'Tracker.PageUrl.getQueryParametersToExclude' => 'getQueryParametersToExclude',
@@ -67,7 +71,8 @@ class TagManager extends \Piwik\Plugin
             'Template.bodyClass' => 'addBodyClass',
             'Access.Capability.addCapabilities' => 'addCapabilities',
             'TwoFactorAuth.requiresTwoFactorAuthentication' => 'requiresTwoFactorAuthentication',
-            'Db.getTablesInstalled' => 'getTablesInstalled'
+            'Db.getTablesInstalled' => 'getTablesInstalled',
+            'Template.siteWithoutDataTab.ReactJs.content' => 'embedReactTagManagerTrackingCode',
         );
     }
 
@@ -260,7 +265,29 @@ class TagManager extends \Piwik\Plugin
     public function addTagManagerCode(&$out)
     {
         Piwik::checkUserHasSomeViewAccess();
+        $model = $this->getContainerModel();
         $view = new View("@TagManager/trackingCode");
+        $view->action = Piwik::getAction();
+        $view->showContainerRow = $model->getNumContainersTotal() > 1;
+        $view->isJsTrackerInstallCheckAvailable = Manager::getInstance()->isPluginActivated('JsTrackerInstallCheck');
+        $out .= $view->render();
+    }
+
+    public function setTagManagerCode(&$out)
+    {
+        $newContent = '<h2>' . Piwik::translate('SitesManager_StepByStepGuide') . '</h2>';
+        $this->addTagManagerCode($newContent);
+        $out = $newContent;
+    }
+
+    public function embedReactTagManagerTrackingCode(&$out, SiteContentDetector $detector)
+    {
+        Piwik::checkUserHasSomeViewAccess();
+        $model = $this->getContainerModel();
+        $view = new View("@TagManager/trackingCodeReact");
+        $view->action = Piwik::getAction();
+        $view->wasDetected = $detector->wasDetected(ReactJs::getId());
+        $view->showContainerRow = $model->getNumContainersTotal() > 1;
         $out .= $view->render();
     }
 
@@ -389,6 +416,8 @@ class TagManager extends \Piwik\Plugin
         $result[] = 'General_Or';
         $result[] = 'General_Recommended';
         $result[] = 'General_Website';
+        $result[] = 'General_ClickX';
+        $result[] = 'General_Update';
         $result[] = 'Goals_Optional';
         $result[] = 'SitesManager_Type';
         $result[] = 'UserCountryMap_None';
@@ -400,10 +429,8 @@ class TagManager extends \Piwik\Plugin
         $result[] = 'TagManager_ConfigureEnvironmentsSuperUser';
         $result[] = 'TagManager_WantToDeployThisChangeCreateVersion';
         $result[] = 'TagManager_ConfigureWhenTagDoes';
-        $result[] = 'TagManager_CustomizeTracking';
         $result[] = 'TagManager_ViewContainerDashboard';
         $result[] = 'TagManager_NoMatomoConfigFoundForContainer';
-        $result[] = 'TagManager_CustomizeTrackingTeaser';
         $result[] = 'TagManager_PublishLiveEnvironmentCapabilityRequired';
         $result[] = 'TagManager_CapabilityPublishLiveContainer';
         $result[] = 'TagManager_VersionAlreadyPublishedToAllEnvironments';
@@ -441,6 +468,7 @@ class TagManager extends \Piwik\Plugin
         $result[] = 'TagManager_ChooseTriggerToContinue';
         $result[] = 'TagManager_ChooseVariableToContinue';
         $result[] = 'TagManager_TriggerConditionsHelp';
+        $result[] = 'TagManager_TriggerConditionsHelpText';
         $result[] = 'TagManager_EnablingPreviewPleaseWait';
         $result[] = 'TagManager_DisablingPreviewPleaseWait';
         $result[] = 'TagManager_UpdatingDebugSiteUrlPleaseWait';
@@ -799,6 +827,40 @@ class TagManager extends \Piwik\Plugin
         $result[] = 'TagManager_TimeSinceLoadVariableUnitDescription';
         $result[] = 'TagManager_UrlParameterVariableNameTitle';
         $result[] = 'TagManager_UrlParameterVariableNameDescription';
+        $result[] = 'TagManager_MatomoTagManagerTrackingInfoLine1';
+        $result[] = 'TagManager_MatomoTagManagerTrackingInfoLine2';
+        $result[] = 'TagManager_SiteWithoutDataReactIntro';
+        $result[] = 'TagManager_SiteWithoutDataReactFollowStepCompleted';
+        $result[] = 'SitesManager_SiteWithoutDataCloudflareFollowStepsIntro';
+        $result[] = 'TagManager_SPAFollowStep1';
+        $result[] = 'TagManager_SPAFollowStep2';
+        $result[] = 'TagManager_SPAFollowStep3';
+        $result[] = 'TagManager_SPAFollowStep5';
+        $result[] = 'TagManager_SPAFollowStep7';
+        $result[] = 'TagManager_SPAFollowStep8';
+        $result[] = 'TagManager_SPAFollowStep9';
+        $result[] = 'TagManager_SPAFollowStep10';
+        $result[] = 'TagManager_SPAFollowStep10a';
+        $result[] = 'TagManager_SPAFollowStep10b';
+        $result[] = 'TagManager_SPAFollowStep11';
+        $result[] = 'TagManager_SPAFollowStep13';
+        $result[] = 'TagManager_SPAFollowStep14';
+        $result[] = 'TagManager_SPAFollowStep15';
+        $result[] = 'TagManager_SPAFollowStep16';
+        $result[] = 'TagManager_ReactFollowStep16';
+        $result[] = 'TagManager_HistoryChangeTriggerName';
+        $result[] = 'TagManager_CategoryUserEngagement';
+        $result[] = 'TagManager_Publish';
+        $result[] = 'TagManager_CustomTitle';
+        $result[] = 'TagManager_CustomUrl';
+        $result[] = 'TagManager_PageViewTriggerName';
+        $result[] = 'TagManager_MatomoTagName';
+        $result[] = 'TagManager_SiteWithoutDataMtmIntro';
+        $result[] = 'TagManager_SiteWithoutDataMtmStep2';
+        $result[] = 'TagManager_SiteWithoutDataMtmStep3';
+        $result[] = 'TagManager_IgnoreGtmDataLaterDescription';
+        $result[] = 'TagManager_IgnoreGtmDataLaterTitle';
+        $result[] = 'TagManager_VersionEditWithNoAccessMessage';
     }
 
     public function getStylesheetFiles(&$stylesheets)
@@ -812,6 +874,7 @@ class TagManager extends \Piwik\Plugin
         $stylesheets[] = "plugins/TagManager/vue/src/ContainerSelector/ContainerSelector.less";
         $stylesheets[] = "plugins/TagManager/vue/src/ContainerDashboard/ContainerDashboard.less";
         $stylesheets[] = "plugins/TagManager/vue/src/Version/VersionEdit.less";
+        $stylesheets[] = "plugins/TagManager/vue/src/TagmanagerTrackingCode/TagManagerTrackingCode.less";
     }
 
     public function getJsFiles(&$jsFiles)

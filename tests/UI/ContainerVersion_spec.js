@@ -144,7 +144,7 @@ describe("ContainerVersion", function () {
     });
 
     it('should load an edit version through URL', async function () {
-        await page.goto(container1Base + '#?idContainerVersion=11');
+        await page.goto(container1Base + '#?idContainerVersion=12');
         await capture.page(page, 'edit_url');
     });
 
@@ -193,7 +193,9 @@ describe("ContainerVersion", function () {
 
     it('should be able to create new version through menu', async function () {
         await page.goto(container1Base);
+        await page.waitForNetworkIdle();
         await (await page.jQuery('#secondNavBar .item:contains(Publish)')).click();
+        await page.waitForNetworkIdle();
         await page.evaluate(function () {
             if (window.scrollTo) {
                 window.scrollTo(0,0);
@@ -219,6 +221,8 @@ describe("ContainerVersion", function () {
 
     it('should be possible to confirm publish version to different environment', async function () {
         await modal.clickButton(page, 'Publish');
+        await page.mouse.move(-10, -10);
+        await page.waitForNetworkIdle();
         await capture.page(page, 'publish_environment_confirmed');
     });
 
@@ -228,18 +232,24 @@ describe("ContainerVersion", function () {
         await capture.page(page, 'debug_version_enable');
     });
 
-    it('should load versions page with some versions as view user', async function () {
-        permissions.setViewUser();
+    it('should load versions page with some versions as write user', async function () {
+        permissions.setWriteUser();
         await page.goto(container1Base);
-        await capture.page(page, 'version_some_exist_view_user');
+        await capture.page(page, 'version_some_exist_write_user');
     });
 
-    it('should load versions page with no versions as view user', async function () {
-        permissions.setViewUser();
+    it('should be possible to edit a version by clicking on edit', async function () {
+        permissions.setWriteUser();
+        await clickFirstRowTableAction('icon-edit');
+        await capture.page(page, 'edit_through_list_for_write_user');
+    });
+
+    it('should load versions page with no versions as write user', async function () {
+        permissions.setWriteUser();
         await page.goto(container3Base);
         await page.waitForSelector('.manageVersion', { visible: true });
-        await capture.selector(page, 'version_none_exist_view_user', '.manageVersion');
-    });
+        await capture.selector(page, 'version_none_exist_write_user', '.manageVersion');
+    })
 
     it('should be able to show import version screen', async function () {
         await page.goto(container1Base);
@@ -268,20 +278,5 @@ describe("ContainerVersion", function () {
         await page.waitForSelector('.tagManagerManageList td');
         await page.waitForTimeout(200);
         await capture.page(page, 'import_version_confirmed');
-    });
-
-    it('should show notice not possible to publish to live container and preselect alternative environment', async function () {
-        permissions.setWriteUser();
-        await page.goto(container1Base);
-        await page.click('.createNewVersion');
-        await page.waitForNetworkIdle();
-        await capture.page(page, 'no_publish_live_container_capability');
-    });
-
-    it('should show notice not possible to publish to live container and preselect alternative environment in selector', async function () {
-        permissions.setWriteUser();
-        await page.goto(container1Base);
-        await clickFirstRowTableAction('icon-rocket');
-        await capture.modal(page, 'no_publish_live_container_capability_selector');
     });
 });

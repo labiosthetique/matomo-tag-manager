@@ -177,6 +177,102 @@
 						</component>
 					</row>
 					<row>
+						<name>isEcommerceView</name>
+						<title>Is Ecommerce View</title>
+						<value>0</value>
+						<defaultValue>0</defaultValue>
+						<type>boolean</type>
+						<uiControl>checkbox</uiControl>
+						<uiControlAttributes>
+						</uiControlAttributes>
+						<availableValues />
+						<description>Used to record that the current page view is an item (product) page view, or a Ecommerce Category page view. On a category page, you can set the parameter category, and set the other parameters to empty strings. Tracking Product/Category page views will allow Matomo to report on Product &amp; Categories conversion rates (Conversion rate = Ecommerce orders containing this product or category / Visits to the product or category). Requires the Ecommerce plugin to be active.</description>
+						<inlineHelp />
+						<introduction />
+						<condition>trackingType == &quot;pageview&quot;</condition>
+						<fullWidth>0</fullWidth>
+					</row>
+					<row>
+						<name>productSKU</name>
+						<title>Product SKU</title>
+						<value />
+						<defaultValue />
+						<type>string</type>
+						<uiControl>text</uiControl>
+						<uiControlAttributes>
+						</uiControlAttributes>
+						<availableValues />
+						<description>Item's SKU code being viewed. On a category page this should be empty.</description>
+						<inlineHelp />
+						<introduction />
+						<condition>trackingType == &quot;pageview&quot; &amp;&amp; isEcommerceView</condition>
+						<fullWidth>0</fullWidth>
+						<component>
+							<plugin>TagManager</plugin>
+							<name>FieldVariableTemplate</name>
+						</component>
+					</row>
+					<row>
+						<name>productName</name>
+						<title>Product Name</title>
+						<value />
+						<defaultValue />
+						<type>string</type>
+						<uiControl>text</uiControl>
+						<uiControlAttributes>
+						</uiControlAttributes>
+						<availableValues />
+						<description>Item's Name being viewed. On a category page this should be empty.</description>
+						<inlineHelp />
+						<introduction />
+						<condition>trackingType == &quot;pageview&quot; &amp;&amp; isEcommerceView</condition>
+						<fullWidth>0</fullWidth>
+						<component>
+							<plugin>TagManager</plugin>
+							<name>FieldVariableTemplate</name>
+						</component>
+					</row>
+					<row>
+						<name>categoryName</name>
+						<title>Category Name</title>
+						<value />
+						<defaultValue />
+						<type>string</type>
+						<uiControl>text</uiControl>
+						<uiControlAttributes>
+						</uiControlAttributes>
+						<availableValues />
+						<description>Category page being viewed. On an item's page, this is the item's category.</description>
+						<inlineHelp />
+						<introduction />
+						<condition>trackingType == &quot;pageview&quot; &amp;&amp; isEcommerceView</condition>
+						<fullWidth>0</fullWidth>
+						<component>
+							<plugin>TagManager</plugin>
+							<name>FieldVariableTemplate</name>
+						</component>
+					</row>
+					<row>
+						<name>price</name>
+						<title>Price</title>
+						<value />
+						<defaultValue />
+						<type>string</type>
+						<uiControl>text</uiControl>
+						<uiControlAttributes>
+						</uiControlAttributes>
+						<availableValues />
+						<description>Item's display price, not used in standard Matomo reports, but output in API product reports.</description>
+						<inlineHelp />
+						<introduction />
+						<condition>trackingType == &quot;pageview&quot; &amp;&amp; isEcommerceView</condition>
+						<fullWidth>0</fullWidth>
+						<component>
+							<plugin>TagManager</plugin>
+							<name>FieldVariableTemplate</name>
+						</component>
+					</row>
+					<row>
 						<name>eventCategory</name>
 						<title>Event Category</title>
 						<value />
@@ -186,7 +282,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's category, for example Videos, Music, Games...</description>
+						<description>The event's category, for example Videos, Music, Games…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -206,7 +302,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's action, for example Play, Pause, Duration, Add Playlist, Downloaded, Clicked...</description>
+						<description>The event's action, for example Play, Pause, Duration, Add Playlist, Downloaded, Clicked…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -226,7 +322,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's object Name, for example a particular Movie name, or Song name, or File name...</description>
+						<description>The event's object Name, for example a particular Movie name, or Song name, or File name…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -696,7 +792,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's category, for example Navigation, Outbound Links, 404 Error...</description>
+						<description>The event's category, for example Navigation, Outbound Links, 404 Error…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -716,7 +812,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's object Name, for example a particular navigation element, a clicked element, form name,...</description>
+						<description>The event's object Name, for example a particular navigation element, a clicked element, form name,…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -736,7 +832,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's action, for example, click, open, close, play, pause...</description>
+						<description>The event's action, for example, click, open, close, play, pause…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -756,7 +852,7 @@
 						<uiControlAttributes>
 						</uiControlAttributes>
 						<availableValues />
-						<description>The event's type Name, for example an value of a send form...</description>
+						<description>The event's type Name, for example an value of a send form…</description>
 						<inlineHelp />
 						<introduction />
 						<condition>trackingType == &quot;event&quot;</condition>
@@ -1081,7 +1177,7 @@
 						</uiControlAttributes>
 						<availableValues />
 						<description>This tag is ideal when you need to add for example custom styles or custom JavaScript or when you are looking for a specific tag which is not yet supported. With this tag you can append any HTML to the bottom of your page, add styles, or execute JavaScript. Note: You can replace content within the HTML with variables by putting a variable name in curly brackets like this {{PageUrl}}.</description>
-						<inlineHelp>&lt;a href=&quot;https://matomo.org/faq/tag-manager/faq_26815/&quot;&gt;Learn more&lt;/a&gt;</inlineHelp>
+						<inlineHelp>&lt;a href=&quot;https://matomo.org/faq/tag-manager/faq_26815/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.TagManager.getParameters&quot;&gt;Learn more&lt;/a&gt;</inlineHelp>
 						<introduction />
 						<condition />
 						<fullWidth>0</fullWidth>
@@ -1660,7 +1756,7 @@
 						<description>If you want to add an In-Page App enter the App ID here. It is about eight digits long. The App ID is not required for the Total Share Counter.</description>
 						<inlineHelp />
 						<introduction />
-						<condition>shareaholicInPageApp &amp;&amp; shareaholicInPageApp !== &quot;total_share_count&quot;</condition>
+						<condition>shareaholicInPageApp=="share_buttons" || shareaholicInPageApp=="follow_buttons" || shareaholicInPageApp=="recommendations"</condition>
 						<fullWidth>0</fullWidth>
 						<component>
 							<plugin>TagManager</plugin>

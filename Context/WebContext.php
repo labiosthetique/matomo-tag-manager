@@ -12,15 +12,19 @@ use Piwik\Common;
 use Piwik\Container\StaticContainer;
 use Piwik\Development;
 use Piwik\Piwik;
+use Piwik\Url;
 use Piwik\Plugins\TagManager\Context\Storage\StorageInterface;
 use Piwik\Plugins\TagManager\Context\WebContext\JavaScriptTagManagerLoader;
 use Piwik\Plugins\TagManager\Context\BaseContext\TemplateLocator;
+use Piwik\Plugins\TagManager\Input\AccessValidator;
 use Piwik\Plugins\TagManager\Model\Container;
 use Piwik\Plugins\TagManager\Model\Environment;
 use Piwik\Plugins\TagManager\Model\Salt;
 use Piwik\Plugins\TagManager\Model\Tag;
 use Piwik\Plugins\TagManager\Model\Trigger;
 use Piwik\Plugins\TagManager\Model\Variable;
+use Piwik\Plugins\TagManager\SystemSettings;
+use Piwik\Plugins\TagManager\Template\Trigger\PageViewTrigger;
 use Piwik\Plugins\TagManager\Template\Variable\VariablesProvider;
 use Piwik\SettingsPiwik;
 
@@ -85,12 +89,13 @@ class WebContext extends BaseContext
         }
 
         $baseJs = $this->javaScriptTagManagerLoader->getJavaScriptContent();
+        $preconfiguredVariablesResponse = $this->getPreConfiguredVariablesJSCodeResponse(self::ID);
 
         foreach ($environments as $environment) {
-            $environmentId = $environment['id'];
+            $environmentId = $environment['id'] ?? false;
             // we make sure to have files even for containers that don't have a release yet, this way they can embed it
             // already nicely into the page and activate it later through the UI
-            if (!in_array($environmentId, $generatedEnvironments, true)) {
+            if ($environmentId && !in_array($environmentId, $generatedEnvironments, true)) {
                 $isPreviewRelease = $environmentId === Environment::ENVIRONMENT_PREVIEW;
                 if ($isPreviewRelease) {
                     $hasPreviewRelease = true;
@@ -110,6 +115,8 @@ class WebContext extends BaseContext
                 $hasPreviewRelease = true;
             }
             $containerJs = $this->generatePublicContainer($container, $release);
+            $replaceMacros = array();
+            $variableTemplates = ['keys' => [], 'values' => []];
 
             foreach ($containerJs['tags'] as &$tag) {
                 $tag['Tag'] = $this->templateLocator->loadTagTemplate($tag, self::ID);
@@ -137,14 +144,32 @@ class WebContext extends BaseContext
                 }
             }
 
-            foreach ($containerJs['variables'] as &$variable) {
+            foreach ($containerJs['variables'] as $variableKey => &$variable) {
                 $variable['Variable'] = $this->templateLocator->loadVariableTemplate($variable, self::ID);
                 $variable['parameters'] = $this->addVariableTemplateToParameters($variable['parameters']);
+                if (!empty($variable['parameters'])) {
+                    $variableTemplates['keys'][] = '{{'.$variable['name'].'}}';
+                    $variableTemplates['values'][] = 'TagManager._buildVariable(' . json_encode($variable) . ", parameters.get('container')).get()";
+                }
+                if (!empty($variable['parameters']['jsFunction']) && strpos($variable['parameters']['jsFunction'], '{{')!==FALSE) {
+                    $replaceMacros[] = ['key' => $variableKey, 'methodName' => $variable['Variable']];
+                }
 
                 if (!$isPreviewRelease) {
                     $variable['name'] = $variable['type'];
                 } else {
                     $variable['name'] = Common::unsanitizeInputValue($variable['name']);
+                }
+            }
+
+            if (!empty($replaceMacros)) {
+                $mergedKeys = array_merge($preconfiguredVariablesResponse['keys'], $variableTemplates['keys']);
+                $mergedValues = array_merge($preconfiguredVariablesResponse['values'], $variableTemplates['values']);
+                foreach ($replaceMacros as $replaceValues) {
+                    if (!empty($containerJs['variables'][$replaceValues['key']]['parameters']['jsFunction'])) {
+                        $containerJs['variables'][$replaceValues['key']]['parameters']['jsFunction'] = str_replace($mergedKeys, $mergedValues, $containerJs['variables'][$replaceValues['key']]['parameters']['jsFunction']);
+                        $this->templateLocator->updateVariableTemplate($replaceValues['methodName'], str_replace($mergedKeys, $mergedValues, $this->templateLocator->getVariableTemplate($replaceValues['methodName'])));
+                    }
                 }
             }
 
@@ -162,6 +187,10 @@ class WebContext extends BaseContext
 
             $js = $this->addPreviewCode($baseJs, $hasPreviewRelease, $isPreviewRelease, $container);
             $js = str_replace(array('/*!! initContainerHook */', '/*!!! initContainerHook */'), $initContainer, $js);
+
+            $ignoreGtmDataLayer = isset($container['ignoreGtmDataLayer']) && $container['ignoreGtmDataLayer'] == 1 ? 'true' : 'false';
+            $windowLevelSettingsJs = "var ignoreGtmDataLayer = {$ignoreGtmDataLayer};";
+            $js = str_replace(array('/*!! windowLevelSettingsHook */', '/*!!! windowLevelSettingsHook */'), $windowLevelSettingsJs, $js);
 
             $path = $this->getJsTargetPath($container['idsite'], $container['idcontainer'], $release['environment'], $container['created_date']);
             $filesCreated[$path] = $js;
@@ -244,19 +273,80 @@ class WebContext extends BaseContext
         $embedCode = <<<INST
 <!-- Matomo Tag Manager -->
 <script>
-var _mtm = window._mtm = window._mtm || [];
-_mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
-var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-g.async=true; g.src='$path'; s.parentNode.insertBefore(g,s);
+  var _mtm = window._mtm = window._mtm || [];
+  _mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
+  (function() {
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src='$path'; s.parentNode.insertBefore(g,s);
+  })();
 </script>
 <!-- End Matomo Tag Manager -->
 INST;
 
         return [[
-            'description' => Piwik::translate('TagManager_ContextWebInstallInstructions', array('"<head>"')),
+            'description' => Piwik::translate('TagManager_ContextWebInstallInstructions', array('<head>')),
             'embedCode' => $embedCode,
-            'helpUrl' => 'https://developer.matomo.org/guides/tagmanager/embedding'
+            'helpUrl' => Url::addCampaignParametersToMatomoLink('https://developer.matomo.org/guides/tagmanager/embedding', null, null, 'App.TagManager.getInstallInstructions')
         ]];
+    }
+
+    public function getInstallInstructionsReact($container, $environment)
+    {
+        $path = $this->getWebPathForRelease($container['idsite'], $container['idcontainer'], $environment, $container['created_date']);
+
+        $embedCode = <<<INST
+import React from 'react';
+
+export default function App () {
+  React.useEffect(() => {
+   var _mtm = window._mtm = window._mtm || [];
+   _mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
+   var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+   g.async=true; g.src='$path'; s.parentNode.insertBefore(g,s);
+  }, [])
+    
+  return (
+    <div>
+      <h1>Hello World</h1>
+    </div>
+  )
+}
+INST;
+
+        return [[
+            'description' => Piwik::translate('TagManager_ContextWebInstallInstructions', array('<head>')),
+            'embedCode' => $embedCode,
+            'helpUrl' => Url::addCampaignParametersToMatomoLink('https://developer.matomo.org/guides/tagmanager/embedding', null, null, 'App.TagManager.getInstallInstructionsReact'),
+            'pageViewTriggerEditUrl' => $this->getPageViewTriggerEditUrl($container['idsite'], $container['idcontainer'])
+        ]];
+    }
+
+    private function getPageViewTriggerEditUrl($idSite, $idContainer)
+    {
+        $url = '';
+        $settings = new SystemSettings();
+        $validator = new AccessValidator($settings);
+        if (!$validator->hasWriteCapability($idSite)) {
+            return $url;
+        }
+        $container = Request::processRequest('TagManager.getContainer', ['idSite' => $idSite, 'idContainer' => $idContainer]);
+        if (!empty($container['draft']['idcontainerversion'])) {
+            $triggers = Request::processRequest('TagManager.getContainerTriggers', ['idSite' => $idSite, 'idContainer' => $idContainer, 'idContainerVersion' => $container['draft']['idcontainerversion']]);
+            if (!empty($triggers)) {
+                foreach ($triggers as $trigger) {
+                    if (!empty($trigger['type']) && $trigger['type'] == PageViewTrigger::ID) {
+                        $url =  SettingsPiwik::getPiwikUrl() . 'index.php?' . Url::getQueryStringFromParameters([
+                                'module' => 'TagManager',
+                                'action' => 'manageTriggers',
+                                'idSite' => $idSite,
+                                'idContainer' => $idContainer,
+                            ]) . '#idTrigger=' . $trigger['idtrigger'];
+                        break;
+                    }
+                }
+            }
+        }
+        return $url;
     }
 
 }

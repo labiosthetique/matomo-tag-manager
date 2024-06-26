@@ -21,6 +21,7 @@ use Piwik\Plugins\TagManager\Model\Tag;
 use Piwik\Plugins\TagManager\TagManager;
 use Piwik\Plugins\TagManager\Template\Tag\CustomHtmlTag;
 use Piwik\Plugins\TagManager\Template\Trigger\CustomEventTrigger;
+use Piwik\Plugins\TagManager\Template\Variable\CustomJsFunctionVariable;
 use Piwik\Plugins\TagManager\tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Tests\Framework\Fixture;
 
@@ -127,6 +128,45 @@ class ContainerTest extends IntegrationTestCase
             'context' => WebContext::ID,
             'name' => 'My Name',
             'description' => 'My Description',
+            'ignoreGtmDataLayer' => version_compare(PHP_VERSION, '8.0', '>=') ? 0 : '0',
+            'status' => ContainersDao::STATUS_ACTIVE,
+            'created_date' => $this->now,
+            'updated_date' => $this->now,
+            'created_date_pretty' => 'Jan 1, 2018 02:03:04',
+            'updated_date_pretty' => 'Jan 1, 2018 02:03:04',
+            'versions' => array(),
+            'releases' => array(),
+            'draft' => array (
+                'idcontainerversion' => 2,
+                'idcontainer' => $idContainer,
+                'idsite' => $this->idSite,
+                'status' => ContainersDao::STATUS_ACTIVE,
+                'revision' => 0,
+                'name' => '',
+                'description' => '',
+                'created_date' => '2018-01-01 02:03:04',
+                'updated_date' => '2018-01-01 02:03:04',
+                'created_date_pretty' => 'Jan 1, 2018 02:03:04',
+                'updated_date_pretty' => 'Jan 1, 2018 02:03:04'
+            )
+        );
+        $this->assertSame($expected, $container);
+    }
+
+    public function test_addContainerIgnoreGtmDdataLayer()
+    {
+        $idContainer = $this->addContainer($this->idSite,'My Name', 'My Description', null, 1);
+        $this->assertNotEmpty($idContainer);
+
+        $container = $this->model->getContainer($this->idSite, $idContainer);
+
+        $expected = array(
+            'idcontainer' => $idContainer,
+            'idsite' => $this->idSite,
+            'context' => WebContext::ID,
+            'name' => 'My Name',
+            'description' => 'My Description',
+            'ignoreGtmDataLayer' => version_compare(PHP_VERSION, '8.0', '>=') ? 1 : '1',
             'status' => ContainersDao::STATUS_ACTIVE,
             'created_date' => $this->now,
             'updated_date' => $this->now,
@@ -199,6 +239,45 @@ class ContainerTest extends IntegrationTestCase
             'context' => WebContext::ID,
             'name' => 'MyUpdated Name',
             'description' => 'My Updated Description',
+            'ignoreGtmDataLayer' => version_compare(PHP_VERSION, '8.0', '>=') ? 0 : '0',
+            'status' => ContainersDao::STATUS_ACTIVE,
+            'created_date' => $this->now,
+            'updated_date' => '2018-02-01 05:06:07',
+            'created_date_pretty' => 'Jan 1, 2018 02:03:04',
+            'updated_date_pretty' => 'Feb 1, 2018 05:06:07',
+            'versions' => array(),
+            'releases' => array(),
+            'draft' => array (
+                'idcontainerversion' => 1,
+                'idcontainer' => $this->idContainer1,
+                'idsite' => $this->idSite,
+                'status' => ContainersDao::STATUS_ACTIVE,
+                'revision' => 0,
+                'name' => '',
+                'description' => '',
+                'created_date' => '2018-01-01 02:03:04',
+                'updated_date' => '2018-01-01 02:03:04',
+                'created_date_pretty' => 'Jan 1, 2018 02:03:04',
+                'updated_date_pretty' => 'Jan 1, 2018 02:03:04'
+            )
+        );
+        $this->assertSame($expected, $container);
+    }
+
+    public function test_updateContainerIgnoreGtmDataLayer()
+    {
+        $this->model->setCurrentDateTime('2018-02-01 05:06:07');
+        $this->updateContainer($this->idSite, $this->idContainer1, 'MyUpdated Name', 'My Updated Description', 1);
+
+        $container = $this->model->getContainer($this->idSite, $this->idContainer1);
+
+        $expected = array(
+            'idcontainer' => $this->idContainer1,
+            'idsite' => $this->idSite,
+            'context' => WebContext::ID,
+            'name' => 'MyUpdated Name',
+            'description' => 'My Updated Description',
+            'ignoreGtmDataLayer' => version_compare(PHP_VERSION, '8.0', '>=') ? 1 : '1',
             'status' => ContainersDao::STATUS_ACTIVE,
             'created_date' => $this->now,
             'updated_date' => '2018-02-01 05:06:07',
@@ -241,8 +320,9 @@ class ContainerTest extends IntegrationTestCase
 
     public function test_checkContainerExists_noExceptionWhenExists()
     {
+        self::expectNotToPerformAssertions();
+
         $this->model->checkContainerExists($this->idSite, $this->idContainer1);
-        $this->assertTrue(true);
     }
 
     public function test_getContainer()
@@ -264,6 +344,7 @@ class ContainerTest extends IntegrationTestCase
             'context' => 'web',
             'name' => 'Container1',
             'description' => '',
+            'ignoreGtmDataLayer' => version_compare(PHP_VERSION, '8.0', '>=') ? 0 : '0',
             'status' => ContainersDao::STATUS_ACTIVE,
             'created_date' => $this->now,
             'updated_date' => $this->now,
@@ -883,10 +964,11 @@ class ContainerTest extends IntegrationTestCase
 
     public function test_checkContainerReleaseExists_whenReleaseExistsNoException()
     {
+        self::expectNotToPerformAssertions();
+
         $this->publishVersion($this->idSite, $this->idContainer1, $this->idContainer1draft, Environment::ENVIRONMENT_LIVE);
 
         $this->model->checkContainerReleaseExists($this->idSite, $this->idContainer1, Environment::ENVIRONMENT_LIVE);
-        $this->assertTrue(true);
     }
 
     public function test_getContainerInstallInstructions_checksEnvironmentExists()
@@ -1149,10 +1231,14 @@ class ContainerTest extends IntegrationTestCase
     public function test_generateContainer_generatesContent()
     {
         $this->addContainerTrigger($this->idSite, $this->idContainer1draft);
+        $this->addContainerVariable($this->idSite, $this->idContainer1draft, 'Macros Pre Configured', 'Macros Pre Configured Description');
         $this->model->enablePreviewMode($this->idSite, $this->idContainer1, $this->idContainer1draft, 'foo');
         $result = $this->model->generateContainer($this->idSite, $this->idContainer1);
         $this->assertNotEmpty($result[StaticContainer::get('TagManagerContainerStorageDir'). '/' . StaticContainer::get('TagManagerContainerFilesPrefix') . $this->idContainer1 .'.js']);
         $this->assertNotEmpty($result[StaticContainer::get('TagManagerContainerStorageDir'). '/' . StaticContainer::get('TagManagerContainerFilesPrefix') . $this->idContainer1 .'_preview.js']);
+        $this->assertStringContainsString("TagManager.dataLayer.get('mtm.clickElement')", $result[StaticContainer::get('TagManagerContainerStorageDir'). '/' . StaticContainer::get('TagManagerContainerFilesPrefix') . $this->idContainer1 .'_preview.js']);
+        $this->assertStringContainsString("return TagManager.dataLayer.get('mtm.clickElement').getAttribute(\"my-attribute\");", $result[StaticContainer::get('TagManagerContainerStorageDir'). '/' . StaticContainer::get('TagManagerContainerFilesPrefix') . $this->idContainer1 .'_preview.js']);
+        $this->assertStringContainsString('return "not found";', $result[StaticContainer::get('TagManagerContainerStorageDir'). '/' . StaticContainer::get('TagManagerContainerFilesPrefix') . $this->idContainer1 .'_preview.js']);
         $this->assertCount(4, $result);
     }
 
@@ -1179,18 +1265,18 @@ class ContainerTest extends IntegrationTestCase
         return $this->model->updateContainerVersion($idSite, $idContainer, $idContainerVersion, $name, $description);
     }
 
-    private function addContainer($idSite, $name = 'My Name', $description = '', $context = null)
+    private function addContainer($idSite, $name = 'My Name', $description = '', $context = null, $ignoreGtmDataLayer = 0)
     {
         if (!isset($context)) {
             $context = WebContext::ID;
         }
 
-        return $this->model->addContainer($idSite, $context, $name, $description);
+        return $this->model->addContainer($idSite, $context, $name, $description, $ignoreGtmDataLayer);
     }
 
-    private function updateContainer($idSite, $idContainer, $name = 'Updated Name', $description = '')
+    private function updateContainer($idSite, $idContainer, $name = 'Updated Name', $description = '', $ignoreGtmDataLayer = 0)
     {
-        return $this->model->updateContainer($idSite, $idContainer, $name, $description);
+        return $this->model->updateContainer($idSite, $idContainer, $name, $description, $ignoreGtmDataLayer);
     }
 
     private function publishVersion($idSite, $idContainer, $idContainerVersion, $environment = null, $login = 'mylogin')
@@ -1217,5 +1303,15 @@ class ContainerTest extends IntegrationTestCase
         $parameters = array('customHtml' => '<p></p>');
         $tag = StaticContainer::get('Piwik\Plugins\TagManager\Model\Tag');
         return $tag->addContainerTag($idSite, $idContainerVersion, $type, $name, $parameters, $fireTriggerIds, $blockTriggerIds, $fireLimit = Tag::FIRE_LIMIT_UNLIMITED, $fireDelay = 0, $priority = 999, $startDate = null, $endDate = null);
+    }
+
+    private function addContainerVariable($idSite, $idContainerVersion, $name = 'MyName', $description = '')
+    {
+        $type = CustomJsFunctionVariable::ID;
+        $parameters = array('jsFunction' => 'function () { if ({{ClickElement}}) { return {{ClickElement}}.getAttribute("my-attribute"); } else { return "not found"; } };');
+        $conditions = array();
+
+        $variable = StaticContainer::get('Piwik\Plugins\TagManager\Model\Variable');
+        return $variable->addContainerVariable($idSite, $idContainerVersion, $type, $name, $parameters, false, [],$description );
     }
 }

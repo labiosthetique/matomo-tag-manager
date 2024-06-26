@@ -17,7 +17,6 @@ use Piwik\Plugins\TagManager\Model\Environment;
 use Piwik\Plugins\TagManager\Model\Salt;
 use Piwik\Plugins\TagManager\tests\Fixtures\TagManagerFixture;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
-use Piwik\Version;
 
 class TestJavaScriptTagManagerLoader extends WebContext\JavaScriptTagManagerLoader {
 
@@ -355,10 +354,6 @@ var seoMetaDescriptionHelloWorld = "{{Referrer}}";
 
     public function test_generate_web()
     {
-        if (version_compare(Version::VERSION, '3.8.0', '<')) {
-            $this->markTestSkipped();
-        }
-
         Piwik::addAction('Controller.TagManager.debug.end', function (&$result, $parameters) {
             $this->assertNotEmpty($result);
             self::assertStringContainsString('<html', $result);
@@ -487,6 +482,14 @@ var seoMetaDescriptionHelloWorld = "{{Referrer}}";
         $container = $this->getContainer();
         $instructions = $this->makeWebContext()->getInstallInstructions($container, Environment::ENVIRONMENT_LIVE);
         self::assertStringContainsString('tests/PHPUnit/proxy/foobar/container_aaacont1.js\';', $instructions[0]['embedCode']);
+    }
+
+    public function test_getWebInstallInstructionsReact()
+    {
+        StaticContainer::getContainer()->set('TagManagerContainerWebDir', '/foobar');
+        $container = $this->getContainer();
+        $instructions = $this->makeWebContext()->getInstallInstructionsReact($container, Environment::ENVIRONMENT_LIVE);
+        self::assertStringContainsString("import React from 'react'", $instructions[0]['embedCode']);
     }
 
     public function test_removeNoLongerExistingEnvironments()

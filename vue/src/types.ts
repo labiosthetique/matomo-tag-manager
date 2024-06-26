@@ -11,6 +11,7 @@ export interface InstallInstructions {
   description: string;
   embedCode: string;
   helpUrl: string;
+  pageViewTriggerEditUrl: string;
 }
 
 // variable types
@@ -253,6 +254,7 @@ export interface Container {
   created_date: string;
   created_date_pretty: string;
   description: string;
+  ignoreGtmDataLayer: boolean;
   draft: Draft;
   idcontainer: string;
   idsite: string|number;

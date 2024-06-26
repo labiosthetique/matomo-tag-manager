@@ -77,6 +77,7 @@ abstract class BaseContext
     abstract public function getName();
     abstract public function generate($container);
     abstract public function getInstallInstructions($container, $environment);
+    abstract public function getInstallInstructionsReact($container, $environment);
 
     protected function generatePublicContainer($container, $release)
     {
@@ -157,6 +158,23 @@ abstract class BaseContext
         $this->variables = array();
 
         return $containerJs;
+    }
+
+    public function getPreConfiguredVariablesJSCodeResponse($context)
+    {
+        $response = ['keys' => [], 'values' => []];
+        $preConfiguredVariables = $this->variablesProvider->getPreConfiguredVariables();
+        foreach ($preConfiguredVariables as $variable) {
+            if (method_exists($variable, 'getDataLayerVariableJs')) {
+                $response['keys'][] = '{{' . $variable->getId() . '}}';
+                $response['values'][] = $variable->getDataLayerVariableJs();
+            } else if (method_exists($variable, 'loadTemplate')) {
+                $response['keys'][] = '{{' . $variable->getId() . '}}';
+                $response['values'][] = '(function(){' . $variable->loadTemplate($context, $variable, true) . '})()';
+            }
+        }
+
+        return $response;
     }
 
     private function parametersToVariableJs($container, $entity)

@@ -19,6 +19,7 @@ use Piwik\Plugins\TagManager\Input\Description;
 use Piwik\Plugins\TagManager\Input\IdSite;
 use Piwik\Plugins\TagManager\Input\Name;
 use Piwik\Plugins\TagManager\Model\Container\ContainerIdGenerator;
+use Piwik\Validators\NumberRange;
 
 
 class Container extends BaseModel
@@ -125,7 +126,7 @@ class Container extends BaseModel
         }
     }
 
-    public function getContainerInstallInstructions($idSite, $idContainer, $environment)
+    public function getContainerInstallInstructions($idSite, $idContainer, $environment, $jsFramework = '')
     {
         $this->checkContainerExists($idSite, $idContainer);
         $this->environment->checkIsValidEnvironment($environment);
@@ -135,12 +136,15 @@ class Container extends BaseModel
         if (!empty($container)) {
             $context = $this->contextProvider->getContext($container['context']);
             if ($context) {
+                if ($jsFramework === 'react') {
+                    return $context->getInstallInstructionsReact($container, $environment);
+                }
                 return $context->getInstallInstructions($container, $environment);
             }
         }
     }
 
-    private function validateContainer($idSite, $name, $description)
+    private function validateContainer($idSite, $name, $description, $ignoreGtmDataLayer)
     {
         $site = new IdSite($idSite);
         $site->check();
@@ -150,18 +154,21 @@ class Container extends BaseModel
 
         $description = new Description($description);
         $description->check();
+
+        $numberRange = new NumberRange(0, 1);
+        $numberRange->validate($ignoreGtmDataLayer);
     }
 
-    public function addContainer($idSite, $context, $name, $description)
+    public function addContainer($idSite, $context, $name, $description, $ignoreGtmDataLayer)
     {
-        $this->validateContainer($idSite, $name, $description);
+        $this->validateContainer($idSite, $name, $description, $ignoreGtmDataLayer);
         $this->contextProvider->checkIsValidContext($context);
 
         $createdDate = $this->getCurrentDateTime();
 
         $idContainer = $this->containerIdGenerator->generateId();
 
-        $this->dao->createContainer($idSite, $idContainer, $context, $name, $description, $createdDate);
+        $this->dao->createContainer($idSite, $idContainer, $context, $name, $description, $createdDate, $ignoreGtmDataLayer);
 
         $this->versionsDao->createDraftVersion($idSite, $idContainer, $createdDate);
 
@@ -170,13 +177,14 @@ class Container extends BaseModel
         return $idContainer;
     }
 
-    public function updateContainer($idSite, $idContainer, $name, $description)
+    public function updateContainer($idSite, $idContainer, $name, $description, $ignoreGtmDataLayer)
     {
-        $this->validateContainer($idSite, $name, $description);
+        $this->validateContainer($idSite, $name, $description, $ignoreGtmDataLayer);
 
         $columns = array(
             'name' => $name,
-            'description' => $description
+            'description' => $description,
+            'ignoreGtmDataLayer' => $ignoreGtmDataLayer
         );
         $this->updateContainerColumns($idSite, $idContainer, $columns);
         $this->generateContainer($idSite, $idContainer);

@@ -1,16 +1,14 @@
-<!--
-  Matomo - free/libre analytics platform
-  @link https://matomo.org
-  @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
--->
-
 <template>
   <div class="tagManagerTrackingCode">
     <ActivityIndicator
-      :style="{opacity: isLoading ? 1 : 0}"
+      v-show="isLoading"
       :loading="true"
+      v-if="showContainerRow || environments.length > 1"
     />
-    <div class="row">
+    <div class="row"
+         v-if="showContainerRow || environments.length > 1"
+         v-show="!isLoading"
+    >
       <div class="col s12 m4 ">
         <div class="form-group row">
           <div class="col s12 input-field">
@@ -51,7 +49,7 @@
             uicontrol="select"
             name="environment"
             :model-value="environment"
-            @update:model-value="environment = $event; fetchInstallInstructions()"
+            @update:model-value="environment = $event; this.$emit('fetchInstallInstructions')"
             :options="environments"
             :disabled="environments.length <= 1"
             :full-width="true"
@@ -68,63 +66,55 @@
       {{ translate('TagManager_NoReleasesFoundForContainer') }}
       <a href>{{ translate('TagManager_PublishVersionToEnvironmentToViewEmbedCode') }} </a>
     </div>
-    <div
+    <template
       v-for="(installInstruction, index) in installInstructions"
       :key="index"
     >
-      <p>{{ installInstruction.description }}
-        <br />
+      <p v-if="showDescription">{{ installInstruction.description }}
         <a
           target="_blank"
           v-if="installInstruction.helpUrl"
           :href="installInstruction.helpUrl"
-        >{{ translate('TagManager_LearnMore') }}</a>
+        >{{ translate('TagManager_LearnMore') }}</a>.
       </p>
-      <pre
-        class="codeblock"
-        v-text="installInstruction.embedCode"
-        v-select-on-focus="{}"
-        ref="codeblock"
-      />
-    </div>
-    <h3 v-if="idContainer">
-      {{ translate('TagManager_CustomizeTracking') }}
-    </h3>
-    <p v-if="idContainer">{{ translate('TagManager_CustomizeTrackingTeaser') }}</p>
-    <ul v-if="idContainer">
-      <li v-if="!matomoConfigs.length">
-        {{ translate('TagManager_NoMatomoConfigFoundForContainer') }}
-      </li>
-      <li
-        v-for="matomoConfig in matomoConfigs"
-        :key="matomoConfig.idvariable"
-      >
-        <a :href="linkTo('manageVariables', idContainer,
-        {idVariable: matomoConfig.idvariable})"
-        >
-          <span class="icon-edit"/> {{ matomoConfig.name }}
-        </a>
-      </li>
-    </ul>
-    <p v-if="idContainer">
-      <br />
-      <a :href="linkTo('dashboard', idContainer)">
-        <span class="icon-show" /> {{ translate('TagManager_ViewContainerDashboard') }}
-      </a>
-    </p>
+      <template v-if="showPlainMtmSteps">
+        <li>
+          <span v-html="$sanitize(getMtmStep2)">
+          </span>.&nbsp;<span v-html="$sanitize(getLearnMoreLink)"></span>.
+        </li>
+        <li v-html="$sanitize(getMtmStep3)"></li>
+      </template>
+      <div>
+        <pre
+          class="codeblock"
+          v-text="installInstruction.embedCode"
+          ref="codeblock"
+          v-copy-to-clipboard="{}"
+        />
+      </div>
+    </template>
+    <template v-if="showBottom && !noReleaseFound && idContainer">
+      <p v-if="!showTestSection" v-html="$sanitize(getCongratulationsText)"></p>
+      <template v-else>
+        <li><component :is="testComponent" :site="site"></component></li>
+      </template>
+    </template>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent } from 'vue';
 import {
   AjaxHelper,
   ActivityIndicator,
   SiteSelector,
-  SelectOnFocus,
   SiteRef,
   MatomoUrl,
   Matomo,
+  translate,
+  CopyToClipboard,
+  useExternalPluginComponent,
+  externalLink,
 } from 'CoreHome';
 import { Field } from 'CorePluginsAdmin';
 import {
@@ -165,14 +155,21 @@ function ucfirst(s: string): string {
 }
 
 export default defineComponent({
-  props: {},
+  props: {
+    showContainerRow: Boolean,
+    showBottom: Boolean,
+    showDescription: Boolean,
+    showPlainMtmSteps: Boolean,
+    showTestSection: Boolean,
+  },
   components: {
     ActivityIndicator,
     SiteSelector,
     Field,
   },
+  emits: ['fetchInstallInstructions'],
   directives: {
-    SelectOnFocus,
+    CopyToClipboard,
   },
   data(): TagmanagerTrackingCodeState {
     return {
@@ -311,14 +308,15 @@ export default defineComponent({
         });
       }
 
-      this.fetchInstallInstructions();
+      this.$emit('fetchInstallInstructions');
       this.fetchVariables(draftVersion);
     },
-    linkTo(action: string, idContainer: string, hash: QueryParameters) {
+    linkTo(action: string, idSite: string, idContainer: string, hash: QueryParameters) {
       const newQuery = MatomoUrl.stringify({
         ...MatomoUrl.urlParsed.value,
         module: 'TagManager',
         action,
+        idSite,
         idContainer,
       });
 
@@ -327,34 +325,6 @@ export default defineComponent({
         newUrl += `#?${MatomoUrl.stringify(hash)}`;
       }
       return newUrl;
-    },
-    fetchInstallInstructions() {
-      this.installInstructions = [];
-
-      if (!this.idContainer || !this.environment || !this.site?.id) {
-        return;
-      }
-
-      this.isLoading = true;
-      AjaxHelper.fetch<InstallInstructions[]>({
-        method: 'TagManager.getContainerInstallInstructions',
-        filter_limit: '-1',
-        idContainer: this.idContainer,
-        environment: this.environment,
-        idSite: this.site.id,
-      }).then((instructions) => {
-        this.installInstructions = instructions;
-        nextTick(() => {
-          const codeblocks = Array.isArray(this.$refs.codeblock)
-            ? this.$refs.codeblock
-            : [this.$refs.codeblock];
-          (codeblocks as HTMLElement[]).forEach((n) => {
-            $(n).effect('highlight', {}, 1500);
-          });
-        });
-      }).finally(() => {
-        this.isLoading = false;
-      });
     },
     fetchVariables(containerDraftVersion: number) {
       this.matomoConfigs = [];
@@ -374,6 +344,44 @@ export default defineComponent({
       }).finally(() => {
         this.isLoading = false;
       });
+    },
+  },
+  computed: {
+    getLearnMoreLink() {
+      return translate(
+        'TagManager_CustomHtmlTagHelpText',
+        externalLink('https://matomo.org/faq/tag-manager/container-dashboard-in-matomo-tag-manager/'),
+        '</a>',
+      );
+    },
+    getMtmStep2() {
+      const idSite = this.site && this.site.id ? this.site.id as string : '';
+      const link = this.linkTo('dashboard', idSite, this.idContainer, []);
+      return translate(
+        'TagManager_SiteWithoutDataMtmStep2',
+        `<a href="${link}">`,
+        '</a>',
+      );
+    },
+    getMtmStep3() {
+      return translate(
+        'TagManager_SiteWithoutDataMtmStep3', '&lt;/head&gt;',
+        externalLink('https://developer.matomo.org/guides/tagmanager/embedding'),
+        '</a>',
+      );
+    },
+    getCongratulationsText() {
+      return translate(
+        'TagManager_SiteWithoutDataReactFollowStepCompleted',
+        '<strong>',
+        '</strong>',
+      );
+    },
+    testComponent() {
+      if (this.showTestSection) {
+        return useExternalPluginComponent('JsTrackerInstallCheck', 'JsTrackerInstallCheck');
+      }
+      return '';
     },
   },
 });
