@@ -15,6 +15,7 @@ use Piwik\Plugins\TagManager\Model\Container;
 use Piwik\Plugins\TagManager\Model\Environment;
 use Piwik\Plugins\TagManager\Model\Salt;
 use Piwik\Plugins\TagManager\Model\Tag;
+use Piwik\Plugins\TagManager\Model\Hook;
 use Piwik\Plugins\TagManager\Model\Trigger;
 use Piwik\Plugins\TagManager\Model\Variable;
 use Piwik\Plugins\TagManager\Template\Variable\VariablesProvider;
@@ -44,6 +45,11 @@ abstract class BaseContext
     protected $tagModel;
 
     /**
+     * @var Hook
+     */
+    protected $hookModel;
+
+    /**
      * @var Container
      */
     protected $containerModel;
@@ -62,12 +68,13 @@ abstract class BaseContext
 
     private $nestedVariableCals = [];
 
-    public function __construct(VariablesProvider $variablesProvider, Variable $variableModel, Trigger $triggerModel, Tag $tagModel, Container $containerModel, StorageInterface $storage, Salt $salt)
+    public function __construct(VariablesProvider $variablesProvider, Variable $variableModel, Trigger $triggerModel, Tag $tagModel, Hook $hookModel, Container $containerModel, StorageInterface $storage, Salt $salt)
     {
         $this->variablesProvider = $variablesProvider;
         $this->variableModel = $variableModel;
         $this->triggerModel = $triggerModel;
         $this->tagModel = $tagModel;
+        $this->hookModel = $hookModel;
         $this->containerModel = $containerModel;
         $this->storage = $storage;
         $this->salt = $salt;
@@ -102,6 +109,7 @@ abstract class BaseContext
             'tags' => [],
             'triggers' => [],
             'variables' => [],
+            'hooks' => [],
         ];
 
         foreach ($this->tagModel->getContainerTags($idSite, $idContainerVersion) as $tag) {
@@ -153,6 +161,10 @@ abstract class BaseContext
             // (for now, we might change this later so triggers can more easily build on top of each other)
             $this->variableToArray($container, $variable);
         }
+
+        foreach ($this->hookModel->getContainerHooks($idSite, $idContainerVersion) as $hook) {
+            $containerJs['hooks'][] = $hook;
+        } 
 
         $containerJs['variables'] = array_values($this->variables);
         $this->variables = array();
@@ -393,7 +405,7 @@ abstract class BaseContext
             $variable = $this->variablesProvider->getPreConfiguredVariable($variableNameOrVariable);
             if ($variable) {
                 $defaultParams = [];
-                foreach ($variable->getParameters() as $parameter) {
+                foreach ($variable->getFilteredParameters() as $parameter) {
                     $defaultParams[$parameter->getName()] = $parameter->getValue();
                 }
                 $var = [
