@@ -12,6 +12,7 @@ namespace Piwik\Plugins\TagManager\Context\BaseContext;
 use Piwik\Plugins\TagManager\Template\Tag\TagsProvider;
 use Piwik\Plugins\TagManager\Template\Trigger\TriggersProvider;
 use Piwik\Plugins\TagManager\Template\Variable\VariablesProvider;
+use Piwik\Plugins\TagManager\Template\Hook\HooksProvider;
 
 class TemplateLocator
 {
@@ -35,11 +36,17 @@ class TemplateLocator
      */
     protected $variablesProvider;
 
-    public function __construct(TagsProvider $tagsProvider, TriggersProvider $triggersProvider, VariablesProvider $variablesProvider)
+    /**
+     * @var HooksProvider
+     */
+    protected $hooksProvider;
+
+    public function __construct(TagsProvider $tagsProvider, TriggersProvider $triggersProvider, VariablesProvider $variablesProvider, HooksProvider $hooksProvider)
     {
         $this->tagsProvider = $tagsProvider;
         $this->triggersProvider = $triggersProvider;
         $this->variablesProvider = $variablesProvider;
+        $this->hooksProvider = $hooksProvider;
     }
 
     public function getLoadedTemplates()
@@ -104,6 +111,21 @@ class TemplateLocator
     {
         if ($this->templateFunctions[$methodName]) {
             return $this->templateFunctions[$methodName];
+        }
+    }
+
+    public function loadHookTemplate($hook, $contextId)
+    {
+        $hookType = $hook['type'];
+        $hookTemplate = $hook['hookClass'];
+        if ($hookTemplate) {
+            $template = $hookTemplate->loadTemplate($contextId, $hook);
+            if ($template) {
+                $methodName = $hookType . 'Hook';
+                $this->templateFunctions[$methodName] = $template;
+
+                return $methodName;
+            }
         }
     }
 }

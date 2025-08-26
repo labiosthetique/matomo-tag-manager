@@ -109,7 +109,7 @@ class Variable extends BaseModel
             throw new \Exception('Invalid variable type');
         }
 
-        $params = $variableTemplate->getParameters();
+        $params = $variableTemplate->getFilteredParameters();
 
         // we make sure to only save parameters that are defined in the tag template
         $newParameters = [];
@@ -573,6 +573,7 @@ class Variable extends BaseModel
         }
 
         $variableTemplate = $this->variablesProvider->getVariable($variable['type']);
+        $variable['__typeClass'] = $variableTemplate;
 
         if (!empty($variableTemplate)) {
             $variable['typeMetadata'] = $variableTemplate->toArray();

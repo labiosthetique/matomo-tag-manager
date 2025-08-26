@@ -105,7 +105,7 @@ class Tag extends BaseModel
             throw new \Exception('Invalid tag type');
         }
 
-        $params = $tagTemplate->getParameters();
+        $params = $tagTemplate->getFilteredParameters();
 
         // we make sure to only save parameters that are defined in the tag template
         $newParameters = [];
@@ -290,6 +290,8 @@ class Tag extends BaseModel
         }
 
         $tagType = $this->tagsProvider->getTag($tag['type']);
+
+        $tag['__typeClass'] = $tagType;
 
         if (!empty($tagType)) {
             $tag['typeMetadata'] = $tagType->toArray();

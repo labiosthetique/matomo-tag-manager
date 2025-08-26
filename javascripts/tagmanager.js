@@ -1409,6 +1409,25 @@
                 parameters = null;
 
             }
+
+            function HookExecutor (container) {
+                this.container = container;
+
+                this.execute = function (hookName, hookArgs, afterCallback) {
+                    var args = Object.values(arguments).slice(4);
+                    var hooks = (this.container.hooks[hookName] || []).slice(0);
+
+                    function next() {
+                        const callback = hooks.shift();
+                        if(!callback) return afterCallback.apply(this, args);
+
+                        return callback.execute(next, hookArgs);
+                    };
+
+                    return next();
+                };
+            }
+
             function Tag (tag, container) {
                 this.type = tag.type;
                 this.name = tag.name;
@@ -1497,10 +1516,11 @@
                 this.fire = function () {
                     if (this.fireDelay) {
                         setTimeout(function () {
-                            self._doFire();
+                            container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
+                            self.beforeFire(self._doFire.bind(self))
                         }, this.fireDelay);
                     } else {
-                        return this._doFire();
+                        return container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
                     }
                 };
 
@@ -1556,6 +1576,7 @@
                 }
 
             }
+
             Tag.FIRE_LIMIT_ONCE_PAGE = 'once_page';
             Tag.FIRE_LIMIT_ONCE_24HOURS = 'once_24hours';
             Tag.FIRE_LIMIT_ONCE_LIFETIME = 'once_lifetime';
@@ -1576,6 +1597,8 @@
                 this.variables = [];
                 this.triggers = [];
                 this.tags = []; // only there for debugging
+                this.hooks = {};
+                this.hookExecutor = new HookExecutor(this);
 
                 this.onNewGlobalDataLayerValue = function (value) {
                     this.dataLayer.push(value);
@@ -1635,6 +1658,16 @@
                 if (container.variables && utils.isArray(container.variables)) {
                     for (i = 0; i < container.variables.length; i++) {
                         this.variables.push(buildVariable(container.variables[i], this));
+                    }
+                }
+
+                if (container.hooks && utils.isArray(container.hooks)) {
+                    for (i = 0; i < container.hooks.length; i++) {
+                        for(j = 0; j < container.hooks[i].targets.length; j++) {
+                            if (!this.hooks[container.hooks[i].targets[j]]) this.hooks[container.hooks[i].targets[j]] = [];
+
+                            this.hooks[container.hooks[i].targets[j]].push(new templates[container.hooks[i].Hook]());
+                        }
                     }
                 }
 
@@ -1764,7 +1797,8 @@
                     container.dataLayer.push({'mtm.containerId': container.id});
                     Debug.log('running container');
 
-                    container.run();
+                    container.hookExecutor.execute('BeforeContainerRun', { container: container }, container.run.bind(container));
+
                     return container;
                 },
                 enableDebugMode: function () { Debug.enabled = true; }

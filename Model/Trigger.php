@@ -87,7 +87,7 @@ class Trigger extends BaseModel
             throw new \Exception('Invalid trigger type');
         }
 
-        $params = $triggerTemplate->getParameters();
+        $params = $triggerTemplate->getFilteredParameters();
 
         // we make sure to only save parameters that are defined in the tag template
         $newParameters = [];
@@ -264,6 +264,8 @@ class Trigger extends BaseModel
         }
 
         $triggerTemplate = $this->triggersProvider->getTrigger($trigger['type']);
+
+        $trigger['__typeClass'] = $triggerTemplate;
 
         if (!empty($triggerTemplate)) {
             $trigger['typeMetadata'] = $triggerTemplate->toArray();

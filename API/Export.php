@@ -78,6 +78,7 @@ class Export
             unset($tag['idsite']);
             unset($tag['typeMetadata']);
             unset($tag['deleted_date']);
+            unset($tag['__typeClass']);
         }
         return $tags;
     }
@@ -91,6 +92,7 @@ class Export
             unset($trigger['idsite']);
             unset($trigger['typeMetadata']);
             unset($trigger['deleted_date']);
+            unset($trigger['__typeClass']);
         }
         return $triggers;
     }
@@ -104,6 +106,7 @@ class Export
             unset($variable['idsite']);
             unset($variable['typeMetadata']);
             unset($variable['deleted_date']);
+            unset($variable['__typeClass']);
         }
         return $variables;
     }
