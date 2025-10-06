@@ -4,3 +4,6 @@ tests/System/processed/*text
 /vue/dist/*.common.js
 /vue/dist/*.map
 /vue/dist/*.development.*
+
+# VS Code Local History plugin
+.history/

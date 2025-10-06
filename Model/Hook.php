@@ -26,7 +26,10 @@ class Hook extends BaseModel
 
     public function getContainerHooks($idSite, $idContainerVersion) {
         $allHooks = $this->hooksProvider->getAllHooks();
-        $hookClasses = array_filter($allHooks, fn ($hook) => $hook->canApplyToContainerVersion($idSite, $idContainerVersion));
+
+        $hookClasses = array_filter($allHooks, function ($hook) use ($idSite, $idContainerVersion) {
+            return $hook->canApplyToContainerVersion($idSite, $idContainerVersion);
+        });
 
         return array_map(fn ($hook) => [
             'hookClass' => $hook,
