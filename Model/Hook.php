@@ -31,12 +31,14 @@ class Hook extends BaseModel
             return $hook->canApplyToContainerVersion($idSite, $idContainerVersion);
         });
 
-        return array_map(fn ($hook) => [
-            'hookClass' => $hook,
-            'type' => $hook->getName(),
-            'name' => $hook->getName(),
-            'targets' => $hook->getTargets(),
-        ], $hookClasses);
+        return array_map(function ($hook) {
+            return [
+                'hookClass' => $hook,
+                'type' => $hook->getName(),
+                'name' => $hook->getName(),
+                'targets' => $hook->getTargets(),
+            ];
+        }, $hookClasses);
     }
 
 }
