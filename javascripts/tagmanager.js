@@ -1517,7 +1517,6 @@
                     if (this.fireDelay) {
                         setTimeout(function () {
                             container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
-                            self.beforeFire(self._doFire.bind(self))
                         }, this.fireDelay);
                     } else {
                         return container.hookExecutor.execute('BeforeTagFire', { container: container, tag: self }, self._doFire.bind(self))
