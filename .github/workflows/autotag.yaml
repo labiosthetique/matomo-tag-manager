@@ -17,3 +17,4 @@ jobs:
       with:
         github-token: ${{ secrets.GH_TOKEN }}
         with-v: "true"
+        release-branch: 5.x-dev
