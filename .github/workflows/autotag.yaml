@@ -1,0 +1,19 @@
+name: autotag
+
+on: 
+  push:
+    branches:
+      - 5.x-dev
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: 5.x-dev
+        fetch-depth: 0
+    - uses: phish108/autotag-action@1.1.51
+      with:
+        github-token: ${{ secrets.GH_TOKEN }}
+        with-v: "true"
